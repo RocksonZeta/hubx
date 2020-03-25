@@ -213,8 +213,8 @@ func (h *Hubx) On(subject string, cb BcListener) {
 	h.BcListeners[subject] = cb
 }
 
-//Send message to broadcaster
-func (h *Hubx) Send(subject string, data interface{}) {
+//Broadcast message to broadcaster
+func (h *Hubx) Broadcast(subject string, data interface{}) {
 	h.log.Trace("Send - subject:" + subject)
 	bs, err := h.marshal(subject, data)
 	if err != nil {
