@@ -262,7 +262,7 @@ func (h *Hubx) BroadcastWs(subject string, msg interface{}) {
 	}()
 }
 
-func (h *Hubx) SendWs(subject string, data interface{}, clients ...Client) {
+func (h *Hubx) SendWs(subject string, data interface{}, clients ...*Client) {
 	h.log.Trace("SendWs - subject:" + subject)
 	Go(func() {
 		bs, err := h.marshal(subject, data)
@@ -282,7 +282,7 @@ func (h *Hubx) SendWs(subject string, data interface{}, clients ...Client) {
 		}
 	})
 }
-func (h *Hubx) SendWsWithCtx(ctx context.Context, subject string, data interface{}, clients ...Client) {
+func (h *Hubx) SendWsWithCtx(ctx context.Context, subject string, data interface{}, clients ...*Client) {
 	h.log.Trace("SendWsWithCtx - subject:" + subject)
 	Go(func() {
 
