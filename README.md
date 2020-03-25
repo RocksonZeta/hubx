@@ -1,5 +1,5 @@
 # hubx
-golang webocket + redis  using actor + command pattern
+golang webocket + redis, using actor + command pattern
 
 
 ## Install
