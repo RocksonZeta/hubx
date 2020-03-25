@@ -28,9 +28,6 @@ type Broadcaster interface {
 	Close() chan<- bool
 }
 
-//UserEvent like user join leave
-type UserEvent func(client *Client) error
-
 //WsFilter Websocket message filter
 type WsFilter func(client *Client, msg PartialMessage, next func())
 
@@ -70,9 +67,9 @@ type Hubx struct {
 	ticker           *time.Ticker
 
 	BeforeJoin            func(client *Client) error
-	AfterJoin             UserEvent
-	BeforeLeave           UserEvent
-	AfterLeave            UserEvent
+	AfterJoin             func(client *Client)
+	BeforeLeave           func(client *Client)
+	AfterLeave            func(client *Client)
 	Unmarshaller          func(dataBs []byte, obj interface{}) error
 	Marshaller            func(obj interface{}) ([]byte, error)
 	RawMessageUnmarhaller func(bs []byte) (PartialMessage, error)

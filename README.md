@@ -55,7 +55,7 @@ func newHub() *hubx.Hubx {
 		fmt.Println(err)
 	}
 	hub.SetBroadcast(bs)
-	hub.AfterJoin = func(client *hubx.Client) error {
+	hub.AfterJoin = func(client *hubx.Client) {
 		uid, _ := client.Props.Load("uid")
 		fmt.Println("user join uid:" + uid.(string))
 		return nil
