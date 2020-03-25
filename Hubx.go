@@ -51,20 +51,22 @@ type Options struct {
 	ChannelSize    int
 }
 type Hubx struct {
-	options          Options
-	clients          map[*Client]bool
-	wsMessageChan    chan *RawMessage
-	broadcastMessage chan []byte
-	broadcaster      Broadcaster
-	register         chan *Client
-	unregister       chan *Client
-	closeChan        chan bool
-	wsFilters        []WsFilter            //filter for local message
-	listeners        map[string]WsListener //listen local message
-	bcFilters        []BcFilter            //filter for network broadcast message
-	BcListeners      map[string]BcListener // subcribe redis message
-	log              *Logger
-	ticker           *time.Ticker
+	options           Options
+	clients           map[*Client]bool
+	wsMessageChan     chan *RawMessage
+	broadcastMessage  chan []byte
+	broadcaster       Broadcaster
+	register          chan *Client
+	unregister        chan *Client
+	closeChan         chan bool
+	wsFilters         []WsFilter            //filter for local message
+	listeners         map[string]WsListener //listen local message
+	defaultWsListener WsListener
+	bcFilters         []BcFilter            //filter for network broadcast message
+	BcListeners       map[string]BcListener // subcribe redis message
+	defaultBcListener BcListener
+	log               *Logger
+	ticker            *time.Ticker
 
 	BeforeJoin            func(client *Client) error
 	AfterJoin             func(client *Client)
@@ -212,6 +214,12 @@ func (h *Hubx) CloseAsync() {
 func (h *Hubx) On(subject string, cb BcListener) {
 	h.BcListeners[subject] = cb
 }
+func (h *Hubx) OnDefault(cb BcListener) {
+	h.defaultBcListener = cb
+}
+func (h *Hubx) OnWsDefault(cb WsListener) {
+	h.defaultWsListener = cb
+}
 
 //Broadcast message to broadcaster
 func (h *Hubx) Broadcast(subject string, data interface{}) {
@@ -349,7 +357,11 @@ func (h *Hubx) onBcMessage(msg PartialMessage) {
 	if cb, ok := h.BcListeners[msg.Subject]; ok {
 		cb(msg)
 	} else {
-		h.log.Error("no handler for message subject:" + msg.Subject)
+		if h.defaultBcListener != nil {
+			h.defaultBcListener(msg)
+		} else {
+			h.log.Warn("no handler for message subject:" + msg.Subject)
+		}
 	}
 }
 
@@ -369,7 +381,11 @@ func (h *Hubx) onWsMessage(client *Client, msg PartialMessage) {
 	if cb, ok := h.listeners[msg.Subject]; ok {
 		cb(client, msg)
 	} else {
-		h.log.Error("no handler for message subject:" + msg.Subject)
+		if h.defaultWsListener != nil {
+			h.defaultWsListener(client, msg)
+		} else {
+			h.log.Error("no handler for message subject:" + msg.Subject)
+		}
 	}
 }
 
