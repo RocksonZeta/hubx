@@ -17,25 +17,6 @@ var DefaultMarhaller = func(obj interface{}) ([]byte, error) {
 	return json.Marshal(obj)
 }
 
-type PartialMessage struct {
-	Subject string
-	Data    json.RawMessage
-}
-
-func (p *PartialMessage) UnmarshalData(result interface{}) error {
-	return DefaultUnmarhaller(p.Data, result)
-}
-func (p *PartialMessage) Marshal() ([]byte, error) {
-	return DefaultMarhaller(p)
-}
-func (p *PartialMessage) Unmarshal(bs []byte) error {
-	return DefaultUnmarhaller(bs, p)
-}
-func (p *PartialMessage) String() string {
-	bs, _ := p.Marshal()
-	return string(bs)
-}
-
 func DefaultRawMessageUnmarhaller(bs []byte) (PartialMessage, error) {
 	var m PartialMessage
 	err := json.Unmarshal(bs, &m)
@@ -85,10 +66,8 @@ type Hubx struct {
 	listeners        map[string]WsListener //listen local message
 	bcFilters        []BcFilter            //filter for network broadcast message
 	BcListeners      map[string]BcListener // subcribe redis message
-	// subcribebcFilters []SubcribeBcFilter     //filter for local message
-	// red    *RedisActor
-	log    *Logger
-	ticker *time.Ticker
+	log              *Logger
+	ticker           *time.Ticker
 
 	BeforeJoin            func(client *Client) error
 	AfterJoin             UserEvent
@@ -160,7 +139,7 @@ func (h *Hubx) Start() {
 }
 
 //SetBroadcast we should set broadcaster before start
-func (h *Hubx) SetBroadcast(broadcaster Broadcaster) {
+func (h *Hubx) SetBroadcaster(broadcaster Broadcaster) {
 	h.broadcaster = broadcaster
 }
 
