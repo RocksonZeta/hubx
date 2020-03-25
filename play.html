@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Play</title>
+</head>
+<body>
+	<form id="form">
+		<input type="text" id="subject" size="10" value="play" />
+		<input type="text" id="data" size="20" value="发达发的发达发的fdfddfd"/>
+		<input type="number" id="count" size="5"  value="1"/>
+		<input type="submit" value="Send" />
+	</form>
+	<div id="log">
+		<div>sended: <span id="send"></span> </div>
+		<div>received: <span id="receive"></span> </div>
+	</div>
+	go test github.com/RocksonZeta/hubx -run TestMain -v
+<script>
+    var subject = document.getElementById("subject");
+    var data = document.getElementById("data");
+    var count = document.getElementById("count");
+    var log = document.getElementById("log");
+    var send = document.getElementById("send");
+    var receive = document.getElementById("receive");
+
+    function appendLog(item) {
+        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+        log.appendChild(item);
+        if (doScroll) {
+            log.scrollTop = log.scrollHeight - log.clientHeight;
+        }
+    }
+
+
+	var con = new WebSocket("ws://" + document.location.host + "/ws");
+	con.onclose = function (evt) {
+		var item = document.createElement("div");
+		item.innerHTML = "<b>Connection closed.</b>";
+		appendLog(item);
+	};
+	con.onmessage = function (evt) {
+		console.log(evt.data)
+		// var messages = evt.data.split('\n');
+		// for (var i = 0; i < messages.length; i++) {
+			// var item = document.createElement("div");
+			// item.innerText = messages[i];
+			// appendLog(item);
+			receive.innerText = (receive.innerText||0)*1+1
+		// }
+	};
+	document.getElementById("form").onsubmit = function () {
+        if (!con) {
+            return false;
+        }
+        if (!subject.value) {
+            return false;
+        }
+		var d = data.value
+		var msg = {"Subject":subject.value , "Data": d}
+		for(var i =0;i<count.value*1;i++) {
+			msg.Data = i+ " - "+d
+			con.send(JSON.stringify(msg));
+			send.innerText=(send.innerText||0)*1+1
+		}
+        return false;
+    };
+</script>
+</body>
+</html>
