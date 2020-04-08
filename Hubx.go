@@ -76,7 +76,8 @@ type Hubx struct {
 	Unmarshaller          func(dataBs []byte, obj interface{}) error
 	Marshaller            func(obj interface{}) ([]byte, error)
 	RawMessageUnmarhaller func(bs []byte) (PartialMessage, error)
-	Ticker                func()
+	Ticker                func(tickerCount int64)
+	tickerCount           int64
 }
 
 func Go(fn func()) {
@@ -155,8 +156,9 @@ func (h *Hubx) run() {
 		case <-h.closeChan:
 			return
 		case <-h.ticker.C:
+			h.tickerCount++
 			if h.Ticker != nil {
-				h.Ticker()
+				h.Ticker(h.tickerCount)
 			}
 		case client := <-h.register:
 			if h.BeforeJoin != nil {

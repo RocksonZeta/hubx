@@ -88,7 +88,7 @@ func newHub() *hubx.Hubx {
 		hub.CloseAsync()
 		h = nil
 	})
-	hub.Ticker = func() {
+	hub.Ticker = func(tickCount int64) {
 	}
 	bs.Start()
 	hub.Start()
