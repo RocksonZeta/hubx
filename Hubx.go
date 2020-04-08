@@ -72,6 +72,7 @@ type Hubx struct {
 	AfterJoin             func(client *Client)
 	BeforeLeave           func(client *Client)
 	AfterLeave            func(client *Client)
+	AfterClose            func()
 	Unmarshaller          func(dataBs []byte, obj interface{}) error
 	Marshaller            func(obj interface{}) ([]byte, error)
 	RawMessageUnmarhaller func(bs []byte) (PartialMessage, error)
@@ -249,6 +250,7 @@ func (h *Hubx) OnWs(subject string, cb WsListener) {
 	h.listeners[subject] = cb
 }
 
+//BroadcastWs send msg to all websocket client
 func (h *Hubx) BroadcastWs(subject string, msg interface{}) {
 	h.log.Trace("BroadcastWs - subject:" + subject)
 	go func() {
@@ -270,6 +272,7 @@ func (h *Hubx) BroadcastWs(subject string, msg interface{}) {
 	}()
 }
 
+//SendWs send msg to specified websocket client
 func (h *Hubx) SendWs(subject string, data interface{}, clients ...*Client) {
 	h.log.Trace("SendWs - subject:" + subject)
 	Go(func() {
@@ -290,10 +293,11 @@ func (h *Hubx) SendWs(subject string, data interface{}, clients ...*Client) {
 		}
 	})
 }
+
+//SendWsWithCtx send msg to specified websocket client with context
 func (h *Hubx) SendWsWithCtx(ctx context.Context, subject string, data interface{}, clients ...*Client) {
 	h.log.Trace("SendWsWithCtx - subject:" + subject)
 	Go(func() {
-
 		m := Message{Subject: subject, Data: data}
 		bs, err := h.Marshaller(m)
 		if err != nil {
@@ -318,6 +322,9 @@ func (h *Hubx) SendWsWithCtx(ctx context.Context, subject string, data interface
 
 func (h *Hubx) close() {
 	h.log.Trace("close")
+	if h.AfterClose != nil {
+		h.AfterClose()
+	}
 	//close hubx
 	close(h.register)
 	close(h.unregister)
@@ -340,7 +347,6 @@ func (h *Hubx) close() {
 		h.broadcaster.Close() <- true
 		h.broadcaster = nil
 	}
-
 }
 
 func (h *Hubx) callWithbcFilters(i int, msg PartialMessage) {
@@ -352,6 +358,8 @@ func (h *Hubx) callWithbcFilters(i int, msg PartialMessage) {
 		h.callWithbcFilters(i+1, msg)
 	})
 }
+
+//onBcMessage on boardcast message
 func (h *Hubx) onBcMessage(msg PartialMessage) {
 	h.log.Trace("onRMessage - subject:" + msg.Subject + " data:" + string(msg.Data))
 	if cb, ok := h.BcListeners[msg.Subject]; ok {
@@ -376,6 +384,7 @@ func (h *Hubx) callWithWsFilters(i int, client *Client, msg PartialMessage) {
 	})
 }
 
+//onWsMessage on websocket message
 func (h *Hubx) onWsMessage(client *Client, msg PartialMessage) {
 	h.log.Trace("onWsMessage - subject:" + msg.Subject + " data:" + string(msg.Data))
 	if cb, ok := h.listeners[msg.Subject]; ok {
