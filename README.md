@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/RocksonZeta/hubx"
+	"github.com/go-redis/redis/v7"
 )
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -47,18 +48,22 @@ func newHub() *hubx.Hubx {
 		fmt.Println(err)
 	}
 	redisOptions := hubx.RedisOptions{
-		Url:     "redis://:pwd@localhost:6379/1",
-		Channel: "hello",
+		RedisChannel: "hello",
+		Redis: redis.Options{
+			Addr:         "localhost:6379",
+			PoolSize:     10,
+			MinIdleConns: 2,
+		},
+		ChannelSize: 10,
 	}
 	bs, err := hubx.NewRedisBroadcaster(hub, redisOptions)
 	if err != nil {
 		fmt.Println(err)
 	}
-	hub.SetBroadcast(bs)
+	hub.SetBroadcaster(bs)
 	hub.AfterJoin = func(client *hubx.Client) {
 		uid, _ := client.Props.Load("uid")
 		fmt.Println("user join uid:" + uid.(string))
-		return nil
 	}
 	hub.UseWs(func(client *hubx.Client, msg hubx.PartialMessage, next func()) {
 		fmt.Println("before 1" + msg.String())
@@ -77,7 +82,7 @@ func newHub() *hubx.Hubx {
 	})
 	hub.OnWs("play", func(client *hubx.Client, msg hubx.PartialMessage) {
 		fmt.Println("OnWs msg:" + msg.String())
-		hub.Send(msg.Subject, msg.Data)
+		hub.Broadcast(msg.Subject, msg.Data)
 	})
 	hub.On("play", func(msg hubx.PartialMessage) {
 		fmt.Println("On msg:" + msg.String())
