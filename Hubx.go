@@ -408,3 +408,13 @@ func (h *Hubx) marshal(subject string, msg interface{}) ([]byte, error) {
 		return h.Marshaller(Message{Subject: subject, Data: msg})
 	}
 }
+
+func (h *Hubx) GetClients() map[*Client]bool {
+	return h.clients
+}
+func (h *Hubx) GetOptions() Options {
+	return h.options
+}
+func (h *Hubx) IsEmpty() bool {
+	return len(h.clients) == 0
+}
