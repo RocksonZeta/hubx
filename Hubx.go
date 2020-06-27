@@ -67,6 +67,7 @@ type Hubx struct {
 	defaultBcListener BcListener
 	log               *Logger
 	ticker            *time.Ticker
+	closed            bool
 
 	BeforeJoin            func(client *Client) error
 	AfterJoin             func(client *Client)
@@ -136,7 +137,7 @@ func New(options Options) (*Hubx, error) {
 //Start hubx actor
 func (h *Hubx) Start() {
 	h.ticker = time.NewTicker(h.options.TickerPeriod)
-	Go(h.run)
+	go h.run()
 }
 
 //SetBroadcast we should set broadcaster before start
@@ -150,7 +151,17 @@ func (h *Hubx) BroadcastMessage() chan<- []byte {
 }
 
 func (h *Hubx) run() {
-	defer h.close()
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+			debug.PrintStack()
+			if !h.closed {
+				h.run()
+			}
+		} else {
+			defer h.close()
+		}
+	}()
 	for {
 		select {
 		case <-h.closeChan:
@@ -188,7 +199,7 @@ func (h *Hubx) run() {
 				h.log.Error("hubx receive bad message")
 				close(msg.Client.send)
 				delete(h.clients, msg.Client)
-				return
+				continue
 			}
 			h.callWithWsFilters(0, msg.Client, m)
 		case msg := <-h.broadcastMessage:
@@ -196,8 +207,9 @@ func (h *Hubx) run() {
 			m, err := h.RawMessageUnmarhaller(msg)
 			if err != nil {
 				h.log.Error("hubx receive bad message from redis channel")
+			} else {
+				h.callWithbcFilters(0, m)
 			}
-			h.callWithbcFilters(0, m)
 		}
 	}
 }
@@ -324,6 +336,7 @@ func (h *Hubx) SendWsWithCtx(ctx context.Context, subject string, data interface
 
 func (h *Hubx) close() {
 	h.log.Trace("close")
+	h.closed = true
 	if h.AfterClose != nil {
 		h.AfterClose()
 	}
@@ -346,8 +359,10 @@ func (h *Hubx) close() {
 
 	// close broadcaster actor
 	if h.broadcaster != nil {
-		h.broadcaster.Close() <- true
-		h.broadcaster = nil
+		Go(func() {
+			h.broadcaster.Close() <- true
+			h.broadcaster = nil
+		})
 	}
 }
 
