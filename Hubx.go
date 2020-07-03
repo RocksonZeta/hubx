@@ -296,7 +296,7 @@ func (h *Hubx) SendWs(subject string, data interface{}, clients ...*Client) {
 			return
 		}
 		timer := time.NewTimer(h.options.WriteTimeout)
-		for client := range h.clients {
+		for _, client := range clients {
 			timer.Reset(h.options.WriteTimeout)
 			select {
 			case client.send <- bs:
