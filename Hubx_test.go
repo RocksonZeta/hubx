@@ -84,6 +84,9 @@ func newHub() *hubx.Hubx {
 		hub.CloseAsync()
 		h = nil
 	})
+	hub.OnLocalMessage = func(msg interface{}) {
+		fmt.Println("OnLocalMessage:", msg)
+	}
 	hub.Ticker = func(tickCount int64) {
 		if tickCount%3 == 0 {
 			if hub.IsEmpty() {

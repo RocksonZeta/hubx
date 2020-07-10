@@ -41,14 +41,15 @@ type BcFilter func(msg PartialMessage, next func())
 type BcListener func(msg PartialMessage)
 
 type Options struct {
-	WriteTimeout   time.Duration
-	PongTimeout    time.Duration
-	PingPeriod     time.Duration
-	TickerPeriod   time.Duration
-	MaxMessageSize int64
-	Logger         io.Writer
-	LoggerLevel    int
-	ChannelSize    int
+	WriteTimeout     time.Duration
+	PongTimeout      time.Duration
+	PingPeriod       time.Duration
+	TickerPeriod     time.Duration
+	MaxMessageSize   int64
+	Logger           io.Writer
+	LoggerLevel      int
+	ChannelSize      int
+	LocalChannelSize int
 }
 type Hubx struct {
 	options           Options
@@ -59,6 +60,7 @@ type Hubx struct {
 	register          chan *Client
 	unregister        chan *Client
 	closeChan         chan bool
+	localChan         chan interface{}
 	wsFilters         []WsFilter            //filter for local message
 	listeners         map[string]WsListener //listen local message
 	defaultWsListener WsListener
@@ -74,6 +76,7 @@ type Hubx struct {
 	BeforeLeave           func(client *Client)
 	AfterLeave            func(client *Client)
 	AfterClose            func()
+	OnLocalMessage        func(msg interface{})
 	Unmarshaller          func(dataBs []byte, obj interface{}) error
 	Marshaller            func(obj interface{}) ([]byte, error)
 	RawMessageUnmarhaller func(bs []byte) (PartialMessage, error)
@@ -121,6 +124,7 @@ func New(options Options) (*Hubx, error) {
 		wsMessageChan:         make(chan *RawMessage, options.ChannelSize),
 		broadcastMessage:      make(chan []byte, options.ChannelSize),
 		closeChan:             make(chan bool),
+		localChan:             make(chan interface{}, options.LocalChannelSize),
 		register:              make(chan *Client, options.ChannelSize),
 		unregister:            make(chan *Client, options.ChannelSize),
 		clients:               make(map[*Client]bool),
@@ -166,6 +170,10 @@ func (h *Hubx) run() {
 		select {
 		case <-h.closeChan:
 			return
+		case v := <-h.localChan:
+			if h.OnLocalMessage != nil {
+				h.OnLocalMessage(v)
+			}
 		case <-h.ticker.C:
 			h.tickerCount++
 			if h.Ticker != nil {
@@ -345,11 +353,13 @@ func (h *Hubx) close() {
 	close(h.unregister)
 	close(h.wsMessageChan)
 	close(h.closeChan)
+	close(h.localChan)
 	h.ticker.Stop()
 	h.unregister = nil
 	h.register = nil
 	h.wsMessageChan = nil
 	h.closeChan = nil
+	h.localChan = nil
 
 	//close all clients
 	for client := range h.clients {
@@ -432,4 +442,7 @@ func (h *Hubx) GetOptions() Options {
 }
 func (h *Hubx) IsEmpty() bool {
 	return len(h.clients) == 0
+}
+func (h *Hubx) LocalChan() chan<- interface{} {
+	return h.localChan
 }
