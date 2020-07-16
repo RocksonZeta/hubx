@@ -159,6 +159,10 @@ func (h *Hubx) run() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
 			debug.PrintStack()
+			if e, ok := err.(error); ok {
+				h.log.Error(e.Error())
+			}
+			h.log.Error(string(debug.Stack()))
 			if !h.closed {
 				h.run()
 			}
