@@ -279,7 +279,7 @@ func (h *Hubx) OnWs(subject string, cb WsListener) {
 //BroadcastWs send msg to all websocket client
 func (h *Hubx) BroadcastWs(subject string, msg interface{}) {
 	h.log.Trace("BroadcastWs - subject:" + subject)
-	go func() {
+	Go(func() {
 		bs, err := h.marshal(subject, msg)
 		if err != nil {
 			h.log.Error("hubx.Hubx.BroadcastWs - marshal failed. subject:" + subject + ",error:" + err.Error())
@@ -295,7 +295,7 @@ func (h *Hubx) BroadcastWs(subject string, msg interface{}) {
 				delete(h.clients, client)
 			}
 		}
-	}()
+	})
 }
 
 //SendWs send msg to specified websocket client
