@@ -2,6 +2,8 @@ package hubx
 
 import (
 	"errors"
+	"runtime/debug"
+	"time"
 
 	"github.com/go-redis/redis/v7"
 )
@@ -47,10 +49,10 @@ func NewRedisBroadcaster(hub *Hubx, options RedisOptions) (*RedisBroadcaster, er
 		options:   options,
 	}
 	r.log = NewLogger(hub.options.Logger, "github.com/RocksonZeta/hubx.RedisBroadcaster", hub.options.LoggerLevel)
-	r.log.Trace("newRedisBroadcaster")
+	r.log.Trace("NewRedisBroadcaster")
 	err := r.initRedis()
 	if err != nil {
-		return nil, nil
+		return r, nil
 	}
 	return r, nil
 }
@@ -73,8 +75,16 @@ func (r *RedisBroadcaster) initRedis() error {
 	// 	MinIdleConns: 2,
 	// })
 	r.red = redis.NewClient(&r.options.Redis)
+	err := r.red.Ping().Err()
+	if err != nil {
+		r.log.Error("initRedis error:" + err.Error())
+		return err
+	}
 	r.sub = r.red.Subscribe(r.options.RedisChannel)
-	_, err := r.sub.Receive()
+	_, err = r.sub.Receive()
+	if err != nil {
+		r.log.Error("initRedis error:" + err.Error())
+	}
 	return err
 }
 
@@ -89,8 +99,20 @@ func (r *RedisBroadcaster) Close() chan<- bool {
 }
 func (r *RedisBroadcaster) run() {
 	r.log.Trace("run")
-	defer r.close()
+	defer func() {
+		r.close()
+		if err := recover(); err != nil { // exit loop by error
+			if e, ok := err.(error); ok {
+				r.log.Error(e.Error())
+			}
+			r.log.Error(string(debug.Stack()))
+			time.Sleep(1 * time.Second)
+			r.initRedis() // 重启
+			r.run()
+		}
+	}()
 	ch := r.sub.ChannelSize(r.options.ChannelSize)
+
 	for {
 		select {
 		case msg := <-ch:

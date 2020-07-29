@@ -1,7 +1,6 @@
 package hubx_test
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -73,7 +72,6 @@ func newHub() *hubx.Hubx {
 	hub.OnWs("play", func(client *hubx.Client, msg hubx.PartialMessage) {
 		fmt.Println("OnWs msg:" + msg.String())
 		hub.Broadcast(msg.Subject, msg.Data)
-		panic(errors.New("hello"))
 	})
 	hub.On("play", func(msg hubx.PartialMessage) {
 		fmt.Println("On msg:" + msg.String())
